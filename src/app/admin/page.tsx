@@ -72,27 +72,43 @@ export default function AdminPage() {
   };
 
   const handleSave = async () => {
+    let res: Response;
+
     if (isCreating) {
-      await fetch("/api/sarpanch", {
+      res = await fetch("/api/sarpanch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
     } else {
       const originalSlug = sarpanchs.find((s) => s.id === editingId)?.slug || formData.slug;
-      await fetch(`/api/sarpanch/${originalSlug}`, {
+      res = await fetch(`/api/sarpanch/${originalSlug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
     }
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.error || "Profile save nahi ho paaya. Please details check karke phir try karein.");
+      return;
+    }
+
     handleCancel();
     fetchSarpanchs();
   };
 
-  const handleDelete = async (slug: string) => {
+  const handleDelete = async (sarpanch: Sarpanch) => {
     if (confirm("Are you sure you want to delete this profile?")) {
-      await fetch(`/api/sarpanch/${slug}`, { method: "DELETE" });
+      const res = await fetch(`/api/sarpanch?id=${sarpanch.id}`, { method: "DELETE" });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || "Profile delete nahi ho paaya. Please refresh karke phir try karein.");
+        return;
+      }
+
       fetchSarpanchs();
     }
   };
@@ -167,7 +183,7 @@ export default function AdminPage() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(s.slug)}
+                      onClick={() => handleDelete(s)}
                       className="flex h-9 w-9 items-center justify-center rounded border border-red-500/10 text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -189,6 +205,10 @@ export default function AdminPage() {
 }
 
 function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormProps) {
+  const updateField = <Key extends keyof Sarpanch>(key: Key, value: Sarpanch[Key]) => {
+    setFormData((current) => ({ ...current, [key]: value }));
+  };
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div>
@@ -196,7 +216,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
         <input
           type="text"
           value={formData.slug || ""}
-          onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+          onChange={(e) => updateField("slug", e.target.value)}
           className="w-full rounded border border-navy/20 p-2 text-sm focus:border-saffron focus:outline-none"
         />
       </div>
@@ -205,7 +225,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
         <input
           type="text"
           value={formData.name || ""}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => updateField("name", e.target.value)}
           className="w-full rounded border border-navy/20 p-2 text-sm focus:border-saffron focus:outline-none"
         />
       </div>
@@ -214,7 +234,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
         <input
           type="text"
           value={formData.village || ""}
-          onChange={(e) => setFormData({ ...formData, village: e.target.value })}
+          onChange={(e) => updateField("village", e.target.value)}
           className="w-full rounded border border-navy/20 p-2 text-sm focus:border-saffron focus:outline-none"
         />
       </div>
@@ -223,7 +243,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
         <input
           type="text"
           value={formData.phone || ""}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          onChange={(e) => updateField("phone", e.target.value)}
           className="w-full rounded border border-navy/20 p-2 text-sm focus:border-saffron focus:outline-none"
         />
       </div>
@@ -231,7 +251,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
         <label className="mb-1 block text-sm font-medium text-navy">Description</label>
         <textarea
           value={formData.description || ""}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) => updateField("description", e.target.value)}
           className="w-full rounded border border-navy/20 p-2 text-sm focus:border-saffron focus:outline-none"
           rows={3}
         />
@@ -248,7 +268,7 @@ function ProfileForm({ formData, setFormData, onSave, onCancel }: ProfileFormPro
               const info = result.info as CloudinaryUploadWidgetInfo | undefined;
 
               if (info?.secure_url) {
-                setFormData({ ...formData, image: info.secure_url });
+                updateField("image", info.secure_url);
               }
             }}
           >
